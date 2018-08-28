@@ -95,7 +95,7 @@ class sambaAccount extends plugin
     function __construct(&$config, $dn= NULL)
     {
 
-        plugin::plugin ($config, $dn);
+        plugin::__construct($config, $dn);
 
         // Set current uid if possible.
         if(isset($this->attrs['uid'][0])){
