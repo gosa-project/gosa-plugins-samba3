@@ -26,7 +26,6 @@ class sambaAccount extends plugin
     var $view_logged = FALSE;
 
     // Domaind information, gid, sid, rid
-    var $sid_cache = array();
     var $uid= "";
     var $uidNumber= 65535;
     var $gidNumber= 65535;
@@ -48,6 +47,7 @@ class sambaAccount extends plugin
     var $sambaLogoffTime= "2147483647";
     var $sambaKickoffTime= "";
     var $sambaPwdCanChange= "0";
+    var $sambaPwdMustChange= "0";
 
     // Flags (checkboxes) to restrict account settings.
     var $sambaAcctFlags= "[UX        ]";
@@ -78,7 +78,7 @@ class sambaAccount extends plugin
     var $ctxattributes= array();
     var $attributes= array("sambaSID", "sambaPwdLastSet", "sambaLogonTime",
             "sambaLogoffTime", "sambaKickoffTime", "sambaPwdCanChange",
-            "sambaAcctFlags", "uid", "sambaMungedDial",
+            "sambaPwdMustChange", "sambaAcctFlags", "uid", "sambaMungedDial",
             "sambaHomePath", "sambaHomeDrive", "sambaLogonScript",
             "sambaProfilePath", "sambaPrimaryGroupSID", "sambaDomainName",
             "sambaUserWorkstations", "sambaPasswordHistory",
@@ -95,7 +95,7 @@ class sambaAccount extends plugin
     function __construct(&$config, $dn= NULL)
     {
 
-        plugin::__construct($config, $dn);
+        plugin::__construct ($config, $dn);
 
         // Set current uid if possible.
         if(isset($this->attrs['uid'][0])){
@@ -144,19 +144,13 @@ class sambaAccount extends plugin
         $this->loadFlagsFromSource($this->attrs);
 
         // Set kickOffTime to date
-        if(isset($this->attrs['sambaKickoffTime'][0])){
-            $this->sambaKickoffTime = date("d.m.Y", $this->sambaKickoffTime);
-            $this->flag_sambaKickoffTime = TRUE;
-        }
-
-        // Use first domain-name if there was none selected before.
-        // And set the primary group sid to "Domain Users".
-        if(!$this->sambaDomainName){
-          $domains= array_keys($this->config->data['SERVERS']['SAMBA']);
-          $this->sambaDomainName = $domains[0];
-          $di = $this->get_domain_info();
-          $sid = $di["sambaSID"][0];
-          $this->sambaPrimaryGroupSID = "{$sid}-513";
+        if (isset($this->attrs['sambaKickoffTime'][0])){
+            if ($this->sambaKickoffTime == 2147483647){
+                $this->sambaKickoffTime = "";
+            } elseif (!$this->sambaKickoffTime == ""){
+                $this->sambaKickoffTime = date("d.m.Y", $this->sambaKickoffTime);
+                $this->flag_sambaKickoffTime = TRUE;
+            }
         }
     }
 
@@ -187,11 +181,22 @@ class sambaAccount extends plugin
         // Specifies the time (UNIX time format) after which the user is allowed to change his password.
         // If this attribute is not set, the user will be free to change his password whenever he wants.
 
-        // A password change is enforced by using 0 as a timestamp in sambaPwdLastSet.
+        // sambaPwdLastSet
+        // _______________
+        // The integer time in seconds since 1970 when the sambaLMPassword and sambaNTPassword attributes were last set.
+
+        // sambaPwdMustChange
+        // _______________
+        // Specifies the time (UNIX time format) when the user is forced to change his password. If this
+        // value is set to 0, the user will have to change his password at first login. If this attribute is not
+        // set, then the password will never expire.
+
+
+        // A password change is enforced by using a timestamp in sambaPwdMustChange.
         //  We simple set it to '0' to enforce a change.
         // --------------------------------
         // Normally it contains a timestamp, which specifies and expiration date. 
-        $this->flag_enforcePasswordChange =  (isset($attrs['sambaPwdLastSet']) && $attrs['sambaPwdLastSet'][0] == '0');
+        $this->flag_enforcePasswordChange =  (isset($attrs['sambaPwdMustChange']) && $attrs['sambaPwdMustChange'][0] == '0');
 
         // A user cannot change his password until the given timestamp has reached.
         //  We simply set it to max int to disallow a password change till the timestamp reaches 4294967295, 
@@ -237,10 +242,18 @@ class sambaAccount extends plugin
         }
         /* Do we represent a valid account? */
         if (!$this->is_account && $this->parent === NULL){
-            $display= "<img alt=\"\"src=\"images/small-error.png\" align=\"middle\">&nbsp;<b>".
-                msgPool::noValidExtension(_("Samba"))."</b>";
+            switch ($theme) {
+                case 'classic':
+                  $symbol = "<img alt='' src='images/small-error.png' align='middle'>";
+                  break;
+                
+                default:
+                  $symbol = "<i class='material-icons'>report</i>";
+                  break;
+            }
+            $display = "<div class='valign-wrapper'>".$symbol.msgPool::noValidExtension(_("Samba"))."</div>";
             $display.= back_to_main();
-            return ($display);
+            return $display;
         }
 
         $display ="";
@@ -272,51 +285,24 @@ class sambaAccount extends plugin
         // Editing from the MyAccount/Personal section may be disabled until we've pressed the 'edit' button.
         $SkipWrite = (!isset($this->parent) || !$this->parent) && !session::is_set('edit');
 
-        if(isset($_POST['select_sambaPrimaryGroupSID'])){
-          $di = $this->get_domain_info();
-          $sid = $di["sambaSID"][0];
-          $this->dialog = new primarySIDSelect($this->config, get_userinfo(), $sid);
-        }
-        if($this->dialog instanceof primarySIDSelect){
-          if(isset($_POST['select_gsid_cancel'])){
-            $this->dialog = NULL;
-          }
-          if(isset($_POST['select_gsid_finish'])){
-            $sid = $this->dialog->detectPostActions();
-            if(isset($sid['targets'])){
-                $headpage = $this->dialog->getHeadpage();
-                foreach($sid['targets'] as $dn){
-                  $attrs = $headpage->getEntry($dn);
-                  $this->sambaPrimaryGroupSID = $attrs['sambaSID'][0];
-                }
-            }
-
-            $this->dialog = NULL;
-          }
-          if((isset($this->dialog)) && (is_object($this->dialog))){
-            return($this->dialog->execute());
-          }
-        }
 
         // Handle the samba logon hours dialog here, instantiate it on request.
         if(isset($_POST['SetSambaLogonHours']) && $this->acl_is_readable("sambaLogonHours")){
             $this->dialog = new sambaLogonHours($this->config,$this->dn,$this->sambaLogonHours, $this->getacl('sambaLogonHours'));
         }
-        if($this->dialog instanceof sambaLogonHours){
-          if(isset($_POST['cancel_logonHours'])){
+        if(isset($_POST['cancel_logonHours'])){
             $this->dialog = FALSE;
-          }
-          if(isset($_POST['save_logonHours'])){
+        }
+        if(isset($_POST['save_logonHours'])){
             $this->dialog->save_object();
             if($this->acl_is_writeable("sambaLogonHours")){
-              $this->sambaLogonHours = $this->dialog->save();
+                $this->sambaLogonHours = $this->dialog->save();
             }
             $this->dialog = FALSE;
-          }
-          if((isset($this->dialog)) && (is_object($this->dialog))){
+        }
+        if((isset($this->dialog)) && (is_object($this->dialog))){
             $this->dialog->save_object();
             return($this->dialog->execute());
-          }
         }
 
 
@@ -365,13 +351,13 @@ class sambaAccount extends plugin
         }
 
         // Dialog canceled
-        if (isset($_POST["add_ws_cancel"])){
+        if (isset($_POST["add_ws_cancel"]) || isset($_POST["cancel-abort"])){
             $this->trustSelect= FALSE;
             $this->dialog= FALSE;
         }
 
         // Add selected machines to trusted ones.
-        if (isset($_POST["add_ws_finish"]) &&  $this->trustSelect){
+        if (isset($_POST["add_ws_finish"]) || isset($_POST["ok-save"]) &&  $this->trustSelect){
             $trusts = $this->trustSelect->detectPostActions();
             if(isset($trusts['targets'])){
                 $headpage = $this->trustSelect->getHeadpage();
@@ -516,7 +502,7 @@ class sambaAccount extends plugin
                     "CtxMaxDisconnectionTime","CtxMaxIdleTimeF","CtxMaxIdleTime","connectclientdrives",
                     "onnectclientprinters","defaultprinter","shadow","brokenconn",
                     "reconn","connectclientprinters","SetSambaLogonHours",
-                    "workstation_list","sambaKickoffTime", "select_sambaPrimaryGroupSID",
+                    "workstation_list","sambaKickoffTime",
                     "enforcePasswordChange", "passwordNeverExpires", "noPasswordRequired",
                     "temporaryDisabled","cannotChangePassword") as $attr){
 
@@ -531,7 +517,7 @@ class sambaAccount extends plugin
             $smarty->assign("tsloginstate","");
         }
 
-        // Create additional info for sambaKickOffTime and sambaPwdLastSet. 
+        // Create additional info for sambaKickOffTime and sambaPwdMustChange. 
         //  e.g. Display effective kickoff time. Domain policy + user settings. 
         $additional_info_PwdMustChange = "";
 
@@ -562,35 +548,8 @@ class sambaAccount extends plugin
 
         $smarty->assign("additional_info_PwdMustChange",set_post($additional_info_PwdMustChange));
         $smarty->assign("multiple_support",$this->multiple_support_active);
-        $smarty->assign("sambaPrimaryGroupSID", $this->getSIDName($this->sambaPrimaryGroupSID));
         $display.= $smarty->fetch (get_template_path('samba3.tpl', TRUE, dirname(__FILE__)));
         return ($display);
-    }
-
-
-    function getSIDName($sid){
-      if(!isset($this->sid_cache[$sid])){
-        $ldap = $this->config->get_ldap_link();
-        $ldap->cd($this->config->current['BASE']);
-        $ldap->search("(&(objectClass=sambaGroupMapping)(sambaSID={$sid}))", array("cn"));
-        if($ldap->count()){
-          $attrs = $ldap->fetch();
-          $name = $attrs['cn'][0];
-          $this->sid_cache[$sid] = $name;
-        }else{
-          if(preg_match("/-512$/", $sid)){
-            $name = _("Domain administrators");
-          }else if(preg_match("/-513$/", $sid)){
-            $name = _("Domain users");
-          }else if(preg_match("/-514$/", $sid)){
-            $name = _("Domain guests");
-          }else{
-            $name = $sid;
-          }
-          $this->sid_cache[$sid] = $name;
-        }
-      }
-      return($this->sid_cache[$sid]);
     }
 
 
@@ -638,6 +597,7 @@ class sambaAccount extends plugin
 
         $sambaKickoffTime = "unset"; 
         $sambaPwdCanChange = "unset";
+        $sambaPwdMustChange = "unset";
         $sambaBadPasswordCount = "unset";
         $sambaBadPasswordTime = "unset";
 
@@ -650,7 +610,7 @@ class sambaAccount extends plugin
         /* User attributes 
          */
         $user_attributes = array("sambaBadPasswordTime","sambaPwdLastSet","sambaLogonTime","sambaLogoffTime",
-                "sambaKickoffTime","sambaPwdCanChange","sambaBadPasswordCount", "sambaSID");
+                "sambaKickoffTime","sambaPwdCanChange","sambaPwdMustChange","sambaBadPasswordCount", "sambaSID");
 
         /* Get samba SID object and parse settings.
          */  
@@ -672,9 +632,8 @@ class sambaAccount extends plugin
                 $$attr = $this->attrs[$attr][0];
             }
         }
-        if (is_numeric($attr['sambaPwdMaxAge']) && is_numeric($sambaPwdMustChange)) {
-            $tmpTimestamp = $sambaPwdLastSet + $attr['sambaPwdMaxAge'];
-            $sambaPwdMustChange = date('d.m.Y', $tmpTimestamp);
+        if (is_numeric($sambaPwdMustChange)) {
+            $sambaPwdMustChange= date('d.m.Y', $sambaPwdMustChange);
         }
         if (is_numeric($sambaKickoffTime)) {
             $sambaKickoffTime= date('d.m.Y', $sambaKickoffTime);
@@ -912,10 +871,10 @@ class sambaAccount extends plugin
         /* Call common method to give check the hook */
         $message= plugin::check();
 
-        if($this->flag_sambaKickoffTime){
-            if(!preg_match("/^[0-3][0-9]\.[0-1][0-9]\.([0-9]){4}$/",$this->sambaKickoffTime)){
+        if ($this->flag_sambaKickoffTime){
+            if (!preg_match("/^[0-3][0-9]\.[0-1][0-9]\.([0-9]){4}$/",$this->sambaKickoffTime)){
                 $message[] = msgPool::invalid(_("Account expires after"));
-            }elseif(!strtotime($this->sambaKickoffTime) || strtotime($this->sambaKickoffTime) >= 2147483647){
+            } elseif (!strtotime($this->sambaKickoffTime) || strtotime($this->sambaKickoffTime) > 2147483647){
                 $message[] = msgPool::invalid(_("Account expires after"));
             }
         }
@@ -963,22 +922,7 @@ class sambaAccount extends plugin
 
         /* We only care if we are on the sambaTab... */
         if (isset($_POST['sambaTab'])){
-
-            $old_d_n = $this->sambaDomainName;
-
             plugin::save_object();
-
-            if($this->sambaDomainName != $old_d_n){
-              $di = $this->get_domain_info();
-              $sid = $di["sambaSID"][0];
-
-              if(preg_match("/\-(512|513|514)$/", $this->sambaPrimaryGroupSID)){
-                $type = preg_replace("/^.*\-((512|513|514))$/", "\\1", $this->sambaPrimaryGroupSID);
-                $this->sambaPrimaryGroupSID = "{sid}-{$type}";
-              }else{
-                $this->sambaPrimaryGroupSID = "{sid}-513";
-              }
-            }
 
             // Display domain info dialog
             if(isset($_POST['display_information'])){
@@ -996,6 +940,12 @@ class sambaAccount extends plugin
                     $this->is_modified |= ($tmp != $this->$flag);
                     $this->$flag = isset($_POST[$flag]);
                 }
+            }
+
+
+            // get sambaDomain attribute
+            if ($this->acl_is_writeable("sambaDomainName",$SkipWrite) && isset ($_POST['sambaDomainName'],$SkipWrite)){
+                $this->sambaDomainName= get_post('sambaDomainName');
             }
 
             // Save CTX values 
@@ -1064,14 +1014,14 @@ class sambaAccount extends plugin
 
         // Handle "enforce password change" flag.
         if($this->flag_enforcePasswordChange){
-            $this->attrs['sambaPwdLastSet'] = 0;
+            $this->attrs['sambaPwdMustChange'] = 0;
         }else{
 
             // Keep old values if given.
-            if ($this->sambaPwdMustChange != 0){
-                $this->attrs['sambaPwdLastSet'] = $this->sambaPwdMustChange;
+            if ($this->sambaPwdMustChange != "0"){
+                $this->attrs['sambaPwdMustChange']= $this->sambaPwdMustChange;
             } else {
-                $this->attrs['sambaPwdLastSet'] = time();
+                $this->attrs['sambaPwdMustChange']= array();
             }
         }
 
@@ -1129,6 +1079,24 @@ class sambaAccount extends plugin
                 $uidNumber++;
             }
             $this->attrs['sambaSID']= $sid;
+
+            // Check for users primary group 
+            $ldap->cd($this->config->current['BASE']);
+            $ldap->search("(&(objectClass=posixGroup)(gidNumber=".$this->gidNumber."))", array("cn"));
+            if ($ldap->count() != 1){
+                msg_dialog::display(_("Warning"), 
+                        _("Cannot convert primary group to samba group: group cannot be identified!"), 
+                        WARNING_DIALOG);
+            } else {
+                $attrs= $ldap->fetch();
+                $g= new group($this->config, $ldap->getDN());
+                if ($g->sambaSID == ""){
+                    $g->sambaDomainName= $this->sambaDomainName;
+                    $g->smbgroup= TRUE;
+                    $g->save ();
+                }
+                $this->attrs['sambaPrimaryGroupSID']= $g->sambaSID;
+            }
         }
 
         // Set or reset homeDrive - Why is this done seperataly?
@@ -1209,6 +1177,18 @@ class sambaAccount extends plugin
 
         // Load flags from source.
         $this->loadFlagsFromSource($this->attrs);
+
+        /* Convert sambaKickoffTime for usage */
+        if ($this->sambaKickoffTime == 2147483647){
+            $this->sambaKickoffTime = "";
+        } elseif (!$this->sambaKickoffTime == "") {
+            $this->sambaKickoffTime = date("d.m.Y", $this->sambaKickoffTime);
+        }
+
+        /* Adjust sambaKickoffTime checkbox */
+        if (!$this->sambaKickoffTime == ""){
+            $this->flag_sambaKickoffTime = TRUE;
+        }
     }
 
 
@@ -1230,7 +1210,6 @@ class sambaAccount extends plugin
                         "sambaHomePath"               => _("Generic home directory") ,
                         "sambaHomeDrive"              => _("Generic samba home drive") ,
                         "sambaDomainName"             => _("Domain") ,
-                        "sambaPrimaryGroupSID"        => _("Primary group"),
                         "sambaLogonScript"            => _("Generic script path") ,
                         "sambaProfilePath"            => _("Generic profile path") ,
                         "AllowLoginOnTerminalServer"  => _("Allow login on terminal server"),
@@ -1255,12 +1234,12 @@ class sambaAccount extends plugin
 
     function multiple_save_object()
     {
-      if (isset($_POST['sambaTab'])){
+        if (isset($_POST['sambaTab'])){
             $this->save_object();
             plugin::multiple_save_object();
             foreach(array("allow_pwchange","tslogin","CtxWFHomeDir","CtxWFHomeDirDrive","CtxWFProfilePath",
                         "inherit","CtxWorkDirectory","CtxInitialProgram","CtxMaxConnectionTimeF",
-                        "CtxMaxConnectionTime","CtxMaxDisconnectionTimeF", "select_sambaPrimaryGroupSID",
+                        "CtxMaxConnectionTime","CtxMaxDisconnectionTimeF",
                         "CtxMaxDisconnectionTime","CtxMaxIdleTimeF","CtxMaxIdleTime","connectclientdrives",
                         "onnectclientprinters","defaultprinter","shadow","brokenconn",
                         "reconn","connectclientprinters","SetSambaLogonHours","workstation_list",
@@ -1307,7 +1286,7 @@ class sambaAccount extends plugin
         if(in_array_strict("sambaKickoffTime", $this->multi_boxes) && $this->flag_sambaKickoffTime){
             if(!preg_match("/^[0-3][0-9]\.[0-1][0-9]\.([0-9]){4}$/",$this->sambaKickoffTime)){
                 $message[] = msgPool::invalid(_("Account expires after"));
-            }elseif(!strtotime($this->sambaKickoffTime) || strtotime($this->sambaKickoffTime) >= 2147483647){
+            } elseif (!strtotime($this->sambaKickoffTime) || strtotime($this->sambaKickoffTime) > 2147483647){
                 $message[] = msgPool::invalid(_("Account expires after"));
             }
         }
@@ -1436,9 +1415,6 @@ class sambaAccount extends plugin
         }
         if(in_array_strict("reconn",$this->multi_boxes)){
             $ret["reconn"]    =$this->mungedObject->getReConn();
-        }
-        if(in_array_strict("select_sambaPrimaryGroupSID",$this->multi_boxes)){
-            $ret["sambaPrimaryGroupSID"]    =$this->sambaPrimaryGroupSID;
         }
 
         // Handle Flags.

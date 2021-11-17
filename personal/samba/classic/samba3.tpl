@@ -40,16 +40,6 @@
 {/render}
      </td>
     </tr>
-    <tr>
-     <td><label for="sambaPrimaryGroupSID">{t}Primary group{/t}</label></td>
-     <td>
-{render acl=$sambaDomainNameACL}
-      <input type="text" name="dummy_1232" value="{$sambaPrimaryGroupSID}" disabled>
-{/render}
-{render acl=$sambaPrimaryGroupSIDACL  checkbox=$multiple_support checked=$use_select_sambaPrimaryGroupSID}
-      <button type='submit' name='select_sambaPrimaryGroupSID'>{t}Select{/t}</button>
-{/render}
-     </td>
    </table>
   </td>
   <td class='left-border'>
@@ -410,14 +400,12 @@
              <input type="text" id="sambaKickoffTime" name="sambaKickoffTime" class="date" style='width:100px' value="{$sambaKickoffTime}">
                 {if $sambaKickoffTimeACL|regex_replace:"/[cdmr]/":"" == "w"}
                   <script type="text/javascript">
-                    {literal}
                        var datepicker2 = new DatePicker({ 
                             relative : 'sambaKickoffTime', 
-                            language : '{/literal}{$lang}{literal}', 
+                            language : '{$lang}', 
                             keepFieldEmpty : true, 
                             enableCloseEffect : false, 
                             enableShowEffect : false });
-                    {/literal}
                   </script>
                {/if}
             {/render}
