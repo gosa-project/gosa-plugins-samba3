@@ -153,7 +153,7 @@ class wingeneric extends plugin
     $ldap->rmdir($this->dn);
     new log("remove","winworkstation/".get_class($this),$this->dn,array_keys($this->attrs),$ldap->get_error());
     if (!$ldap->success()){
-      msg_dialog::display(_("LDAP error"), msgPool::ldaperror($ldap->get_error(), $this->dn, LDAP_DEL, get_class()));
+      msg_dialog::display(_("LDAP error"), msgPool::ldaperror($ldap->get_error(), $this->dn, LDAP_DEL, __CLASS__));
     }
     $this->handle_post_events("remove");
 
@@ -302,7 +302,7 @@ class wingeneric extends plugin
     }
 
     if (!$ldap->success()){
-      msg_dialog::display(_("LDAP error"), msgPool::ldaperror($ldap->get_error(), $this->dn, 0, get_class()));
+      msg_dialog::display(_("LDAP error"), msgPool::ldaperror($ldap->get_error(), $this->dn, 0, __CLASS__));
     }
 
     // Prepare list of object classes
@@ -343,7 +343,7 @@ class wingeneric extends plugin
                           'shadowAccount' => '',
                           'sambaSamAccount' => ''
                           ),
-                      'onFailureDisablePlugin' => array(get_class())
+                      'onFailureDisablePlugin' => array(__CLASS__)
                       ),
 
 
@@ -371,5 +371,5 @@ class wingeneric extends plugin
 
 }
 
-// vim:tabstop=2:expandtab:shiftwidth=2:filetype=php:syntax:ruler:
+
 ?>
