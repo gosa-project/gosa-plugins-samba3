@@ -34,7 +34,6 @@ class sambaLogonHours extends plugin
 
     /* Rework string, because it was stored in little endian */
     $new = '';
-    $byte = [];
     for($i = 0 ; $i < 21 ; $i ++ ){
       $part         = strrev(substr($slh, $i * 8, 8));
       $byte['hi']   = substr($part,0,4);
@@ -119,7 +118,6 @@ class sambaLogonHours extends plugin
  
     /* Rework string, because it was stored in little endian */
     $new = '';
-    $byte = [];
     for($i = 0 ; $i < 21 ; $i ++ ){
       $part         = strrev(substr($slh, $i * 8, 8));
       $byte['hi']   = substr($part,0,4);

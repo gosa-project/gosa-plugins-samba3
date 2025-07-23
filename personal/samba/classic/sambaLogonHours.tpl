@@ -1,7 +1,6 @@
 {if $acl}
 <!-- Javacript function used to switch a complete row or col of selected hours -->
 <script language="javascript" type="text/javascript">
-  {literal}
   var $regex = new Array();
   function toggle_chk($reg)
   {
@@ -15,7 +14,6 @@
       chk_set_all($reg,false);
     }
   }
-  {/literal}
 </script>
 {/if}
 
