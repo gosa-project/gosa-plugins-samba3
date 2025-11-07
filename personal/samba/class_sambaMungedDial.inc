@@ -113,7 +113,7 @@ class sambaMungedDial
 
   function readTime ($time)
   {
-	$lo= substr($time, 0, 4);
+  	$lo= substr($time, 0, 4);
   	$hi= substr($time, 4, 4);
   
   	$usecs= (hexdec(substr($lo, 2, 2)) * 256 + hexdec(substr($lo, 0, 2))) +
@@ -165,7 +165,7 @@ class sambaMungedDial
   			$paramValue= sambaMungedDial::strhex($paramValue.chr(0).chr(0));
   		} else {
   			$isString= FALSE;
-  		}
+  		}  	
   
   		/* Time parameter? */
   		if (in_array_strict($paramName, $this->timeParams)){
