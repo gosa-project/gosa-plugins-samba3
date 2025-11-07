@@ -106,14 +106,14 @@ class sambaMungedDial
 
   function genTime ($minutes)
   {
-  	$usec= (int) ($minutes * 60 * 1000);
+  	$usec= (intval($minutes) * 60 * 1000);
   	$src=  sprintf('%04x%04x', $usec & 0x0FFFF, ($usec & 0x0FFFF0000) >> 16);
   	return (sambaMungedDial::endian(substr($src, 0, 4)).sambaMungedDial::endian(substr($src, 4, 4)));
   }
 
   function readTime ($time)
   {
-  	$lo= substr($time, 0, 4);
+	$lo= substr($time, 0, 4);
   	$hi= substr($time, 4, 4);
   
   	$usecs= (hexdec(substr($lo, 2, 2)) * 256 + hexdec(substr($lo, 0, 2))) +

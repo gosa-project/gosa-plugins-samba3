@@ -1070,7 +1070,7 @@ class sambaAccount extends plugin
         if ($this->sambaSID == "" || $this->orig_sambaDomainName != $this->sambaDomainName){
             $uidNumber= $this->uidNumber;
             while(TRUE){
-                $sid= $this->SID."-".($uidNumber*2 + $this->ridBase);
+                $sid= $this->SID."-".($uidNumber*2 + intval($this->ridBase));
                 $ldap->cd($this->config->current['BASE']);
                 $ldap->search("(sambaSID=$sid)", array("sambaSID"));
                 if ($ldap->count() == 0){
