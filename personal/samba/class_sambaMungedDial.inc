@@ -165,7 +165,7 @@ class sambaMungedDial
   			$paramValue= sambaMungedDial::strhex($paramValue.chr(0).chr(0));
   		} else {
   			$isString= FALSE;
-  		}  	
+  		}
   
   		/* Time parameter? */
   		if (in_array_strict($paramName, $this->timeParams)){
