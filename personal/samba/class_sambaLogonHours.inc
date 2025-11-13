@@ -6,7 +6,7 @@ class sambaLogonHours extends plugin
 
   var $sambaLogonHours = "";
   var $Matrix          = array();
-  var $timezone        = 0; 
+  public int $timezone = 0; 
   var $config;
   var $acl;
 
@@ -18,7 +18,7 @@ class sambaLogonHours extends plugin
 
     /* Get default timezone */
     $zone = timezone::get_default_timezone();
-    $this->timezone = $zone['value'];
+    $this->timezone = (int) $zone['value'];
 
     /* Convert to bin */
     $tmp = '';

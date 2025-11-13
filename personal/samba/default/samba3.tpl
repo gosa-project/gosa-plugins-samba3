@@ -340,7 +340,7 @@
                 {render acl=$sambaKickoffTimeACL}
                     <div class="input-field inline">
                         <input type="text" id="lang" value="{$lang}" hidden="true">
-                        <input type="text" id="sambaKickoffTime" name="sambaKickoffTime" class="datepicker" value="{$sambaKickoffTime}" style="width: 200px;">
+                        <input type="text" id="sambaKickoffTime" name="sambaKickoffTime" class="futureDatepicker" value="{$sambaKickoffTime}" style="width: 200px;">
                         <label for="sambaKickoffTime"></label>
                     </div>
                 {/render}
