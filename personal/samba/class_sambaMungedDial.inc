@@ -304,7 +304,7 @@ class sambaMungedDial
   	$result= array();
   	if (session::get("js")){
   		foreach ($this->timeParams as $value) {
-  			if (!isset($this->ctx[$value]) || (isset($this->ctx[$value]) && $this->ctx[$value] == 0)) {
+  			if (!isset($this->ctx[$value]) || $this->ctx[$value] === '' || $this->ctx[$value] == 0) {
   				$result[$value."Mode"]= "disabled";
   			} else {
   				$result[$value."Mode"]= "";
@@ -545,7 +545,7 @@ class sambaMungedDial
   function getCtxMaxConnectionTimeF ()
   {
   	// Connection Time is 0 if disabled
-  	if (isset($this->ctx['CtxMaxConnectionTime']) && ($this->ctx['CtxMaxConnectionTime'] != 0)) {
+  	if (isset($this->ctx['CtxMaxConnectionTime']) && $this->ctx['CtxMaxConnectionTime'] !== '' && ($this->ctx['CtxMaxConnectionTime'] != 0)) {
   		$result= true;
   	} else {
   		$result= false;
@@ -566,7 +566,7 @@ class sambaMungedDial
   function getCtxMaxDisconnectionTimeF ()
   {
   	// Connection Time is 0 if disabled
-  	if (isset($this->ctx['CtxMaxDisconnectionTime']) && ($this->ctx['CtxMaxDisconnectionTime'] != 0)) {
+  	if (isset($this->ctx['CtxMaxDisconnectionTime']) && $this->ctx['CtxMaxDisconnectionTime'] !== '' && ($this->ctx['CtxMaxDisconnectionTime'] != 0)) {
   		$result= true;
   	} else {
   		$result= false;
@@ -587,7 +587,7 @@ class sambaMungedDial
   function getCtxMaxIdleTimeF ()
   {
   	// Connection Time is 0 if disabled
-  	if (isset($this->ctx['CtxMaxIdleTime']) && ($this->ctx['CtxMaxIdleTime'] != 0)) {
+  	if (isset($this->ctx['CtxMaxIdleTime']) && $this->ctx['CtxMaxIdleTime'] !== '' && ($this->ctx['CtxMaxIdleTime'] != 0)) {
   		$result= true;
   	} else {
   		$result= false;
