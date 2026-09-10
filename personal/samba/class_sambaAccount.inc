@@ -816,8 +816,8 @@ class sambaAccount extends plugin
         }
 
         $str .= "\n<tr><td>"._("Password change available").":     </td><td>".$sambaPwdCanChange."</td></tr>".
-            "\n</table>";
-        "\n</div>";
+            "\n</table>".
+            "\n</div>";
         return($str);
     }
 
