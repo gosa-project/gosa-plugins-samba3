@@ -61,7 +61,7 @@
      <td><label for="">{t}Profile path{/t}</label></td>
      <td>
 {render acl=$sambaProfilePathACL  checkbox=$multiple_support checked=$use_sambaProfilePath}
-      <input type='text' class="center" id="sambaProfilePath" name="sambaProfilePath" size=35 maxlength=60 value="{$sambaProfilePath}">
+      <input type='text' id="sambaProfilePath" name="sambaProfilePath" size=35 maxlength=60 value="{$sambaProfilePath}">
 {/render}
      </td>
     </tr>

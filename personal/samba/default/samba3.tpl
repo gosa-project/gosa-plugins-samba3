@@ -41,7 +41,7 @@
             {render acl=$sambaProfilePathACL checkbox=$multiple_support checked=$use_sambaProfilePath}
                 <div class="input-field">
                     <label for="">{t}Profile path{/t}</label>
-                    <input type='text' class="center" id="sambaProfilePath" name="sambaProfilePath" size=35 maxlength=60 value="{$sambaProfilePath}">
+                    <input type='text' id="sambaProfilePath" name="sambaProfilePath" size=35 maxlength=60 value="{$sambaProfilePath}">
                 </div>
             {/render}
         </div>
